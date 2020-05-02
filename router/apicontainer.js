@@ -1,6 +1,7 @@
 const axios = require('axios');
 const dataComposer = require('./datacomposer');
 
+
 exports.getServicePoint1 = async function fetchdata() {
     return await axios.all([
         axios.get(`${process.env.BASE_URL}posts`),

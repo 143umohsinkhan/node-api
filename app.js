@@ -2,13 +2,18 @@ const express = require('express')
 const app = express();
 const routes = require('./router/router')
 const bodyParser = require('body-parser')
+const cluster = require('cluster');
+const os = require('os');
+
 require('dotenv').config()
 
 // parse application/json
 app.use(bodyParser.json())
 
-//PORT 
+//PORT
 const PORT = process.env.PORT || 8000
+const cpuCount = os.cpus().length;
+
 // Add headers
 app.use(function (req, res, next) {
 
@@ -33,5 +38,24 @@ app.use(function (req, res, next) {
 
 app.use('/', routes)
 
-//Starting server on port 
-app.listen(PORT, () => console.log('Server is up and running now ...'))
+// check if the process is the master process
+if (cluster.isMaster) {
+    // print the number of CPUs
+    console.log(`Total CPUs are: ${cpuCount}`);
+
+    for (let i = 0; i < cpuCount; i += 1) cluster.fork();
+
+    // when a new worker is started
+    cluster.on('online', worker => console.log(`Worker started with Worker Id: ${worker.id} having Process Id: ${worker.process.pid}`));
+
+    // when the worker exits
+    cluster.on('exit', worker => {
+        // log
+        console.log(`Worker with Worker Id: ${worker.id} having Process Id: ${worker.process.pid} went offline`);
+        // let's fork another worker
+        cluster.fork();
+    });
+} else {
+    //Starting server on port
+    app.listen(PORT, () => console.log('Server is up and running now ...'))
+}
